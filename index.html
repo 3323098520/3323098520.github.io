@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta name="viewport" > 
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="./v7.3.0-package/ol.css" type="text/css"> 
+        <style>
+			.result-container {
+				position: absolute;
+				top: 150px;
+				left:50px;
+				border: 2px solid #ddd;
+				width: 400px;
+				background-color: rgba(32, 192, 195, 0.4);
+			}
+
+			.result-container table {
+				border-top: 2px solid #ddd;
+				width: 100%;
+			}
+			.result-container .head {
+				background-color: rgba(45, 197, 199, 0.7) !important;
+				color: #fff;
+			}
+			.result-container table th,
+			td,
+			tr {
+				padding: 0;
+				text-align: center;
+			}
+
+			.result-container tr:nth-child(odd) {
+				background: #ddd;
+			}
+			.result-container tr:nth-child(even) {
+				background: #fff;
+			}
+            #map {
+               width:1500px;
+               height:700px;
+            }
+            .Inf {
+                width: 100%;
+                position: absolute;
+                z-index: 999;
+              }
+              #controls {
+                position: absolute;
+                width: 350px;
+                border-radius: 7px 7px 0 0;
+                background-color: white;
+                padding: 10px;
+                top: 8px;
+                left: 50px;
+                font-size: 15px;
+                font-family: 宋体;
+                box-shadow: 10px 15px 30px rgb(34, 39, 59);
+              }
+
+			  button {
+
+				background-color: rgb(170, 171, 133);
+				
+				color: #2030a6;
+				
+				padding: 10px 10px;
+				
+				border: none;
+				
+				border-radius: 5px;
+				
+				cursor: pointer;
+				
+				transition: background-color 0.5s ease;}
+				
+				button:hover {
+				
+				background-color: #29b64d;}
+        </style>
+        <title>校园地图</title>
+    </head>
+    <body>
+        <div class="Inf">
+            <div id="controls">
+              <div class="top"></div>
+              <div class="box">
+                底图显示：
+                <input type="checkbox" id="gaode" checked/>高德地图<br />
+              </div>
+              <div class="box1">
+                图层控制：
+                <input type="checkbox" id="jiaoxuelou" checked />教学楼
+                <input type="checkbox" id="shitang" checked />食堂
+                <input type="checkbox" id="shuiti" checked />水体
+                <input type="checkbox" id="sushelou" checked />宿舍楼
+                <br /><br>
+              </div>
+              <div class="box2">
+                <button class="btn" onclick="addInteraction()">多边形查询</button>
+                <button class="btn1" onclick="clearInteraction()">清除多边形</button>
+                <button class="btn2" onclick="clearQuery()">清除查询结果</button><br /><br>
+              </div>
+              <div class="box3">
+                <input
+                  type="text"
+                  class="property-inp"
+                  placeholder="请 输 入 关 键 词 "
+				  style="text-align: center;height:30px;width:160px"
+                />&nbsp&nbsp<button class="btn3" >属 性 查 询</button>
+              </div>
+            </div>
+            <div class="result-container" style="display: none;position:fixed;top:200px">
+              <div class="top1"></div>
+              <table></table>
+            </div>
+          </div>
+        <script type="text/javascript" src="./v7.3.0-package/dist/ol.js"></script>
+        <div id="map"></div> 
+        <script>
+            //地图容器
+            var map = new ol.Map({
+          
+                view: new ol.View({
+                    center: ol.proj.fromLonLat([117.143444,34.214511]), 
+                    zoom: 16,
+                }),
+                target: 'map',
+               
+            });
+			
+
+			
+
+			//教学楼
+			var jiaoxuelou = new ol.layer.Vector({
+				source: new ol.source.Vector({
+				  url: " http://localhost:8338/geoserver/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geoserver:jiaoxuelou&maxFeatures=50&outputFormat=application%2Fjson", // 矢量数据来源
+				  format: new ol.format.GeoJSON(), // 解析矢量数据的解析器
+				  
+				}),
+				zIndex:9999,
+				style: new ol.style.Style({
+				  // 自定义矢量地图样式
+				  stroke: new ol.style.Stroke({
+					color: "red",
+					width: 2,
+				  }),
+				}),
+				 });
+				 let jxl= document.querySelector("#jiaoxuelou");
+				 jxl.addEventListener("click", function (e) {
+					 if (jxl.checked) {
+					   map.addLayer(jiaoxuelou);
+					 } else {
+					   map.removeLayer(jiaoxuelou);
+					 }
+				   });
+
+				   //宿舍楼
+			var sushelou = new ol.layer.Vector({
+				source: new ol.source.Vector({
+				  url: " http://localhost:8338/geoserver/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geoserver:sushelou&maxFeatures=50&outputFormat=application%2Fjson", // 矢量数据来源
+				  format: new ol.format.GeoJSON(), // 解析矢量数据的解析器
+				  
+				}),
+				zIndex:9999,
+				style: new ol.style.Style({
+				  // 自定义矢量地图样式
+				  stroke: new ol.style.Stroke({
+					color: "blue",
+					width: 2,
+				  }),
+				}),
+				 });
+				 let ssl= document.querySelector("#sushelou");
+				 ssl.addEventListener("click", function (e) {
+					 if (ssl.checked) {
+					   map.addLayer(sushelou);
+					 } else {
+					   map.removeLayer(sushelou);
+					 }
+				   });
+
+				   //水体
+			var shuiti = new ol.layer.Vector({
+				source: new ol.source.Vector({
+				  url: "http://localhost:8338/geoserver/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geoserver:shuiti&maxFeatures=50&outputFormat=application%2Fjson", // 矢量数据来源
+				  format: new ol.format.GeoJSON(), // 解析矢量数据的解析器
+				  
+				}),
+				zIndex:9999,
+				style: new ol.style.Style({
+				  // 自定义矢量地图样式
+				  stroke: new ol.style.Stroke({
+					color: "green",
+					width: 2,
+				  }),
+				}),
+				 });
+				 let st= document.querySelector("#shuiti");
+				 st.addEventListener("click", function (e) {
+					 if (st.checked) {
+					   map.addLayer(shuiti);
+					 } else {
+					   map.removeLayer(shuiti);
+					 }
+				   });
+
+				   //食堂
+			var shitang = new ol.layer.Vector({
+				source: new ol.source.Vector({
+				  url: "http://localhost:8338/geoserver/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geoserver:shitang&maxFeatures=50&outputFormat=application%2Fjson", // 矢量数据来源
+				  format: new ol.format.GeoJSON(), // 解析矢量数据的解析器
+				  
+				}),
+				zIndex:9999,
+				style: new ol.style.Style({
+				  // 自定义矢量地图样式
+				  stroke: new ol.style.Stroke({
+					color: "orange",
+					width: 2,
+				  }),
+				}),
+				 });
+				 let shit= document.querySelector("#shitang");
+				 shit.addEventListener("click", function (e) {
+					 if (shit.checked) {
+					   map.addLayer(shitang);
+					 } else {
+					   map.removeLayer(shitang);
+					 }
+				   });
+
+
+				  
+				   
+
+
+            //高德底图
+            var gaodeMapLayer = new ol.layer.Tile({
+                source: new ol.source.XYZ({
+                    url: 'http://wprd0{1-4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}' //高德地图
+                }),
+				zIndex:1,
+            }); 
+			 
+            let gaode = document.querySelector("#gaode");
+            gaode.addEventListener("click", function (e) {
+                if (gaode.checked) {
+                  map.addLayer(gaodeMapLayer);
+                } else {
+                  map.removeLayer(gaodeMapLayer);
+                }
+              });
+
+
+			  //页面首次加载
+			  map.addLayer(gaodeMapLayer);   
+			  map.addLayer(jiaoxuelou);  
+			  map.addLayer(sushelou);
+			  map.addLayer(shuiti);
+			  map.addLayer(shitang);
+
+
+           // 绘图图层
+			var drawSource = new ol.source.Vector({ wrapX: false });
+			var drawVector = new ol.layer.Vector({
+				source: drawSource,
+				zIndex:99999,
+			});
+			map.addLayer(drawVector);
+			// 绘制多边形
+			var feature;
+			function addInteraction() {
+				var draw = new ol.interaction.Draw({
+					source: drawSource,
+					type: "Polygon",
+					zIndex:99999,
+				});
+				map.addInteraction(draw);
+				draw.on("drawend", function (evt) {
+					drawSource.clear();
+					feature = evt.feature;
+					map.removeInteraction(draw);
+					spatialQuery();
+				});
+			}
+
+			// 清除多边形
+			function clearInteraction() {
+				drawSource.clear();
+			}
+			// 清除查询结果
+			function clearQuery() {
+				spaceSource.clear();
+				document.querySelector(".result-container").style.display = "none";
+			}
+
+			// 查询结果显示图层
+			var spaceSource = new ol.source.Vector();
+			var spaceVector = new ol.layer.Vector({
+				source: spaceSource,
+				style: new ol.style.Style({
+					stroke: new ol.style.Stroke({
+						color: "red",
+						width: 3
+					})
+				})
+			});
+			map.addLayer(spaceVector);
+
+			// 空间查询
+			function spatialQuery() {
+				var featureRequest = new ol.format.WFS().writeGetFeature({
+					srsName: "EPSG:3857", // 坐标系
+					featureNS: "http://localhost:8081", // 命名空间
+					featurePrefix: "geoserver", // 工作区
+					featureTypes: ["jiaoxuelou","shitang","shuiti","sushelou"], // 图层名
+					outputFormat: "application/json",
+					filter: ol.format.filter.intersects("the_geom", feature.getGeometry(), "EPSG:3857")
+				});
+
+				fetch("http://localhost:8338/geoserver/geoserver/wfs", {
+					method: "POST",
+					body: new XMLSerializer().serializeToString(featureRequest)
+				})
+					.then(function (response) {
+						return response.json();
+					})
+					.then(function (json) {
+						showResultList(json);
+						var features = new ol.format.GeoJSON().readFeatures(json);
+						if (features.length == 0) {
+							alert("没有数据");
+						} else {
+							spaceSource.clear();
+							spaceSource.addFeatures(features);
+							//map.getView().fit(spaceSource.getExtent()); // 视图缩放至查询结果
+						}
+					});
+			}
+
+			// 展示空间查询结果列表
+			function showResultList(list) {
+				const { features } = list;
+				const propertyList = features.map(item => ({
+					id: item.id,
+					name: item.properties.NAME,
+					area: item.properties.SHAPE_Area
+				}));
+				const tableDOM = document.querySelector(".result-container table");
+				tableDOM.innerHTML = `
+          <tr class="head">
+					  <th>Id</th>
+					  <th>NAME</th>
+					  <th>AREA</th>
+				  </tr>
+        `;
+				document.querySelector(".result-container").style.display = "block";
+				propertyList.forEach(item => {
+					const trDOM = document.createElement("tr");
+					trDOM.innerHTML = `
+            <tr>
+					    <td>${item.id}</td>
+					    <td>${item.name}</td>
+					    <td>${item.area}</td>
+				  </tr>
+          `;
+					tableDOM.appendChild(trDOM);
+				});
+			}
+
+			/*document.querySelector(".result-close").addEventListener("click", () => {
+				document.querySelector(".result-container").style.display = "none";
+			});*/
+
+			// 属性查询
+			function propertyQuery(queryStr) {
+				var featureRequest = new ol.format.WFS().writeGetFeature({
+					srsName: "EPSG:3857", // 坐标系
+					featureNS: "http://localhost:8081", // 命名空间
+					featurePrefix: "geoserver", // 工作区
+					featureTypes: ["sushelou"], // 图层名
+					outputFormat: "application/json",
+					filter: ol.format.filter.like("NAME", `*${queryStr}*`)
+				});
+
+				fetch("http://localhost:8338/geoserver/geoserver/wfs", {
+					method: "POST",
+					body: new XMLSerializer().serializeToString(featureRequest)
+				})
+					.then(function (response) {
+						return response.json();
+					})
+					.then(function (json) {
+						var features = new ol.format.GeoJSON().readFeatures(json);
+						if (features.length == 0) {
+							alert("当前仅支持查询宿舍楼区！");
+						} else {
+							spaceSource.clear();
+							spaceSource.addFeatures(features);
+							map.getView().fit(spaceSource.getExtent()); // 视图缩放至查询结果
+						}
+						
+					});
+			}
+			document.querySelector(".btn3").addEventListener("click", () => {
+				const str = document.querySelector(".property-inp").value;
+				propertyQuery(str);
+			  });
+
+			/*function baocuo()
+			{
+				confirm("属性查询功能正在维护中，敬请期待！")
+			}   */    
+        </script>
+    </body>
+</html>
